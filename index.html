@@ -470,7 +470,7 @@
                             console.log(`⚪ [HIERARCHY MATCH] White Acrylic: Mesh="${meshName}" Parent="${parentName}"`);
                         }
                         // 5. STAINLESS STEEL for Lock
-                        else if (combinedNorm.includes('CILINDRO') || combinedNorm.includes('CERRADURA')) {
+                        else if (combinedNorm.includes('CILINDRO') || combinedNorm.includes('CERRADURA') || normMesh.includes('SOLID1102')) {
                             child.material = stainlessMaterial;
                             lastEntry.matched = "🔑 LOCK";
                             console.log(`🔑 [HIERARCHY MATCH] Stainless Steel Lock: Mesh="${meshName}" Parent="${parentName}"`);
@@ -838,7 +838,7 @@
 
                 if (object.name.includes('PUERTA') || object.name.includes('BISAGRA') || isDoorClick) {
                     toggleDoor();
-                } else if (normName.includes('CILINDRO') || normName.includes('CERRADURA')) {
+                } else if (normName.includes('CILINDRO') || normName.includes('CERRADURA') || normName.includes('SOLID1_102')) {
                     if (!isDoorOpen) toggleDoor();
                     showInfo("Abrir con llave", "Ante cortes de energía, la maquina permanece cerrada");
                 } else if (object.name.includes('LECTOR') || object.name.includes('BIOMETRICO')) {
@@ -862,7 +862,7 @@
 
             if (intersects.length > 0) {
                 const name = intersects[0].object.name.toLowerCase();
-                if (name.includes('puerta') || name.includes('bisagra') || name.includes('lector') || name.includes('solid') || name.includes('cilindro') || name.includes('cerradura')) {
+                if (name.includes('puerta') || name.includes('bisagra') || name.includes('lector') || name.includes('solid') || name.includes('cilindro') || name.includes('cerradura') || name.includes('solid1_102')) {
                     canvas.style.cursor = 'pointer';
                     return;
                 }
