@@ -387,12 +387,12 @@
                 side: THREE.DoubleSide
             });
 
-            // Stainless Steel material for the lock
-            const stainlessMaterial = new THREE.MeshStandardMaterial({
-                color: 0xcccccc,
+            // Aluminum material for the lock
+            const aluminumMaterial = new THREE.MeshStandardMaterial({
+                color: 0xe5e5e5, // Lighter, typical of aluminum
                 metalness: 1.0,
-                roughness: 0.2,
-                envMapIntensity: 2.0
+                roughness: 0.4,  // Slightly more matte than stainless steel
+                envMapIntensity: 1.5
             });
 
             const acrylicTargetNames = [
@@ -469,11 +469,11 @@
                             lastEntry.matched = "⚪ ACRYLIC";
                             console.log(`⚪ [HIERARCHY MATCH] White Acrylic: Mesh="${meshName}" Parent="${parentName}"`);
                         }
-                        // 5. STAINLESS STEEL for Lock
+                        // 5. ALUMINUM for Lock
                         else if (combinedNorm.includes('CILINDRO') || combinedNorm.includes('CERRADURA') || normMesh.includes('SOLID1102')) {
-                            child.material = stainlessMaterial;
+                            child.material = aluminumMaterial;
                             lastEntry.matched = "🔑 LOCK";
-                            console.log(`🔑 [HIERARCHY MATCH] Stainless Steel Lock: Mesh="${meshName}" Parent="${parentName}"`);
+                            console.log(`🔑 [HIERARCHY MATCH] Aluminum Lock: Mesh="${meshName}" Parent="${parentName}"`);
                         }
                     }
                 });
