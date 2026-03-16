@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Model Comparison Tool</title>
+    <style>
+        body { font-family: monospace; background: #1a1a2e; color: #e0e0e0; padding: 20px; }
+        h1 { color: #007aff; }
+        .diff { color: #ff6b6b; font-weight: bold; background: rgba(255,100,100,0.1); padding: 2px 6px; border-radius: 4px; }
+        .same { opacity: 0.4; }
+        .section { margin: 20px 0; padding: 15px; background: #16213e; border-radius: 10px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+        th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #333; }
+        th { color: #007aff; }
+        #status { padding: 10px; background: #0f3460; border-radius: 8px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 GLB Model Comparison Tool</h1>
+    <div id="status">Loading models...</div>
+    <div id="output"></div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.162.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.162.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+        const loader = new GLTFLoader();
+        const statusEl = document.getElementById('status');
+        const outputEl = document.getElementById('output');
+
+        function loadModel(url) {
+            return new Promise((resolve, reject) => {
+                loader.load(url, (gltf) => resolve(gltf.scene), undefined, reject);
+            });
+        }
+
+        function extractHierarchy(obj, depth = 0) {
+            const nodes = [];
+            obj.traverse((child) => {
+                nodes.push({
+                    name: child.name || '(unnamed)',
+                    type: child.type,
+                    position: child.position.clone(),
+                    rotation: {
+                        x: THREE.MathUtils.radToDeg(child.rotation.x),
+                        y: THREE.MathUtils.radToDeg(child.rotation.y),
+                        z: THREE.MathUtils.radToDeg(child.rotation.z),
+                        order: child.rotation.order
+                    },
+                    scale: child.scale.clone(),
+                    isMesh: child.isMesh,
+                    isGroup: child.isGroup,
+                    parent: child.parent ? child.parent.name : null
+                });
+            });
+            return nodes;
+        }
+
+        async function compare() {
+            try {
+                statusEl.textContent = '⏳ Loading CLOSED door model...';
+                const closedScene = await loadModel('V2.5.1 AAA ENSAMBLE CABINET MAIN REVIT puerta cerrada.glb');
+                
+                statusEl.textContent = '⏳ Loading OPEN door model...';
+                const openScene = await loadModel('V2.5.1 AAA ENSAMBLE CABINET MAIN REVIT puerta abierta.glb');
+
+                statusEl.textContent = '✅ Both models loaded! Comparing...';
+
+                const closedNodes = extractHierarchy(closedScene);
+                const openNodes = extractHierarchy(openScene);
+
+                // Build lookup maps
+                const closedMap = {};
+                closedNodes.forEach(n => { closedMap[n.name] = n; });
+                const openMap = {};
+                openNodes.forEach(n => { openMap[n.name] = n; });
+
+                // Find differences
+                let html = '';
+
+                // 1. Full hierarchy
+                html += '<div class="section"><h2>📋 Full Scene Hierarchy (Closed Model)</h2>';
+                html += '<table><tr><th>Name</th><th>Type</th><th>Parent</th><th>Position</th><th>Rotation (deg)</th></tr>';
+                closedNodes.forEach(n => {
+                    html += `<tr>
+                        <td>${n.name}</td>
+                        <td>${n.type}</td>
+                        <td>${n.parent || '-'}</td>
+                        <td>(${n.position.x.toFixed(4)}, ${n.position.y.toFixed(4)}, ${n.position.z.toFixed(4)})</td>
+                        <td>(${n.rotation.x.toFixed(2)}°, ${n.rotation.y.toFixed(2)}°, ${n.rotation.z.toFixed(2)}°)</td>
+                    </tr>`;
+                });
+                html += '</table></div>';
+
+                // 2. Differences
+                html += '<div class="section"><h2>🔴 DIFFERENCES (Parts that MOVED between closed → open)</h2>';
+                html += '<table><tr><th>Name</th><th>Type</th><th>Parent</th><th>Closed Rotation</th><th>Open Rotation</th><th>Delta</th></tr>';
+
+                let diffCount = 0;
+                closedNodes.forEach(cn => {
+                    const on = openMap[cn.name];
+                    if (!on) return;
+
+                    const posChanged = cn.position.distanceTo(on.position) > 0.001;
+                    const rotChanged = (
+                        Math.abs(cn.rotation.x - on.rotation.x) > 0.1 ||
+                        Math.abs(cn.rotation.y - on.rotation.y) > 0.1 ||
+                        Math.abs(cn.rotation.z - on.rotation.z) > 0.1
+                    );
+
+                    if (posChanged || rotChanged) {
+                        diffCount++;
+                        const dx = (on.rotation.x - cn.rotation.x).toFixed(2);
+                        const dy = (on.rotation.y - cn.rotation.y).toFixed(2);
+                        const dz = (on.rotation.z - cn.rotation.z).toFixed(2);
+
+                        html += `<tr class="diff">
+                            <td><strong>${cn.name}</strong></td>
+                            <td>${cn.type}</td>
+                            <td>${cn.parent || '-'}</td>
+                            <td>(${cn.rotation.x.toFixed(2)}°, ${cn.rotation.y.toFixed(2)}°, ${cn.rotation.z.toFixed(2)}°)</td>
+                            <td>(${on.rotation.x.toFixed(2)}°, ${on.rotation.y.toFixed(2)}°, ${on.rotation.z.toFixed(2)}°)</td>
+                            <td><strong>Δ(${dx}°, ${dy}°, ${dz}°)</strong></td>
+                        </tr>`;
+
+                        if (posChanged) {
+                            html += `<tr class="diff">
+                                <td colspan="3">↳ Position also changed</td>
+                                <td>(${cn.position.x.toFixed(4)}, ${cn.position.y.toFixed(4)}, ${cn.position.z.toFixed(4)})</td>
+                                <td>(${on.position.x.toFixed(4)}, ${on.position.y.toFixed(4)}, ${on.position.z.toFixed(4)})</td>
+                                <td></td>
+                            </tr>`;
+                        }
+                    }
+                });
+
+                if (diffCount === 0) {
+                    html += '<tr><td colspan="6">No differences found in rotation or position. The models may use different mesh structures entirely.</td></tr>';
+                }
+
+                html += '</table>';
+                html += `<p>Total differences found: <strong>${diffCount}</strong></p>`;
+                html += '</div>';
+
+                outputEl.innerHTML = html;
+                statusEl.textContent = `✅ Comparison complete! Found ${diffCount} differences.`;
+
+            } catch (err) {
+                statusEl.textContent = '❌ Error: ' + err.message;
+                console.error(err);
+            }
+        }
+
+        compare();
+    </script>
+</body>
+</html>
