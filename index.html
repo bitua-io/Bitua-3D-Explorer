@@ -387,6 +387,14 @@
                 side: THREE.DoubleSide
             });
 
+            // Stainless Steel material for the lock
+            const stainlessMaterial = new THREE.MeshStandardMaterial({
+                color: 0xcccccc,
+                metalness: 1.0,
+                roughness: 0.2,
+                envMapIntensity: 2.0
+            });
+
             const acrylicTargetNames = [
                 'A INTERIOR SEPARADOR IZQUIERDO:1',
                 'A INTERIOR SEPARADOR ATRAS:1',
@@ -460,6 +468,12 @@
                             child.material = acrylicMaterial;
                             lastEntry.matched = "⚪ ACRYLIC";
                             console.log(`⚪ [HIERARCHY MATCH] White Acrylic: Mesh="${meshName}" Parent="${parentName}"`);
+                        }
+                        // 5. STAINLESS STEEL for Lock
+                        else if (combinedNorm.includes('CILINDRO') || combinedNorm.includes('CERRADURA')) {
+                            child.material = stainlessMaterial;
+                            lastEntry.matched = "🔑 LOCK";
+                            console.log(`🔑 [HIERARCHY MATCH] Stainless Steel Lock: Mesh="${meshName}" Parent="${parentName}"`);
                         }
                     }
                 });
@@ -808,6 +822,7 @@
                 const object = intersects[0].object;
 
                 console.log('Clicked:', object.name);
+                const normName = object.name.toUpperCase();
 
                 // Check if clicking door or hinge area (traverse ancestors including pivot)
                 let isDoorClick = false;
@@ -823,6 +838,9 @@
 
                 if (object.name.includes('PUERTA') || object.name.includes('BISAGRA') || isDoorClick) {
                     toggleDoor();
+                } else if (normName.includes('CILINDRO') || normName.includes('CERRADURA')) {
+                    if (!isDoorOpen) toggleDoor();
+                    showInfo("Abrir con llave", "Ante cortes de energía, la maquina permanece cerrada");
                 } else if (object.name.includes('LECTOR') || object.name.includes('BIOMETRICO')) {
                     showInfo("Face Recognition Security", "Our AI-powered volumetric face recognition identifies users in under 0.5 seconds, ensuring hands-free, high-security access.");
                 } else {
@@ -844,7 +862,7 @@
 
             if (intersects.length > 0) {
                 const name = intersects[0].object.name.toLowerCase();
-                if (name.includes('puerta') || name.includes('bisagra') || name.includes('lector') || name.includes('solid')) {
+                if (name.includes('puerta') || name.includes('bisagra') || name.includes('lector') || name.includes('solid') || name.includes('cilindro') || name.includes('cerradura')) {
                     canvas.style.cursor = 'pointer';
                     return;
                 }
