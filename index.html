@@ -189,6 +189,104 @@
         #sidebar:not(.collapsed) #sidebar-toggle-icon {
             transform: rotate(180deg);
         }
+
+        /* Lock Annotation Styles */
+        #lock-annotation {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            display: none;
+            pointer-events: auto;
+            font-size: 16px;
+            font-weight: 400;
+            z-index: 100;
+            border-left: 4px solid var(--primary);
+            backdrop-filter: blur(10px);
+            color: var(--text);
+            max-width: 250px;
+        }
+
+        #leader-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 99;
+            display: none;
+        }
+
+        #leader-line path {
+            fill: none;
+            stroke: #444444; /* Dark gray */
+            stroke-width: 2;
+            opacity: 0.8;
+        }
+
+        /* Debug Overlay */
+        #camera-debug {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+            border: 1px solid #00ff00;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+            pointer-events: auto; /* Enable interaction for the button */
+        }
+
+        #camera-debug h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            border-bottom: 1px solid #00ff00;
+            padding-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #btn-copy-debug {
+            background: #00ff00;
+            color: black;
+            border: none;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        #btn-copy-debug:hover {
+            background: #00cc00;
+            transform: scale(1.05);
+        }
+
+        #btn-copy-debug:active {
+            transform: scale(0.95);
+        }
+
+        #debug-toggle-hint {
+            position: absolute;
+            bottom: 80px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 10px;
+            color: #666;
+            pointer-events: none;
+        }
     </style>
 </head>
 
@@ -237,11 +335,25 @@
     <div id="container">
         <canvas id="three-canvas"></canvas>
         <div id="tooltip">Click to interact</div>
+        <div id="lock-annotation">Abiri con llave</div>
+        <svg id="leader-line">
+            <path id="line-path" d=""></path>
+        </svg>
     </div>
 
     <div class="info-panel">
         🖱️ Click to interact | Right-click to pan | Simulator on the right
     </div>
+
+    <div id="camera-debug">
+        <h3>
+            <span>Camera Debug</span>
+            <button id="btn-copy-debug">COPY</button>
+        </h3>
+        <div>POS: <span id="cam-pos">0, 0, 0</span></div>
+        <div>TGT: <span id="cam-tgt">0, 0, 0</span></div>
+    </div>
+    <div id="debug-toggle-hint">Press 'D' for Camera Coordinates</div>
 
     <!-- Scripts -->
     <script type="importmap">
@@ -303,16 +415,16 @@
         const pmremGenerator = new THREE.PMREMGenerator(renderer);
         pmremGenerator.compileEquirectangularShader();
         const envScene = new THREE.Scene();
-        
+
         // Add multiple lights to the environment to create rich reflections
         const envLight1 = new THREE.PointLight(0xffffff, 100);
         envLight1.position.set(5, 10, 5);
         envScene.add(envLight1);
-        
+
         const envLight2 = new THREE.PointLight(0xffffff, 80);
         envLight2.position.set(-5, 5, -5);
         envScene.add(envLight2);
-        
+
         const envLight3 = new THREE.RectAreaLight(0xffffff, 50, 10, 10);
         envLight3.position.set(0, 10, 0);
         envLight3.lookAt(0, 0, 0);
@@ -365,9 +477,9 @@
             // Highly transparent glass material (Clear)
             const glassMaterial = new THREE.MeshPhysicalMaterial({
                 color: 0xffffff,
-                transmission: 1.0, 
+                transmission: 1.0,
                 opacity: 1,
-                thickness: 0.02, 
+                thickness: 0.02,
                 roughness: 0,
                 metalness: 0,
                 ior: 1.5,           // Index of Refraction for Class
@@ -405,30 +517,43 @@
             try {
                 const meshList = [];
                 console.log("🔍 Starting deep hierarchy traversal...");
-                
+
+                let consoleMaterial = null;
+                const meshToUpdate = [];
+
                 m.traverse((child) => {
                     const meshName = child.name || "UNNAMED";
                     const parentName = (child.parent && child.parent.name) ? child.parent.name : "";
-                    
+
                     const normMesh = meshName.toUpperCase().replace(/[^A-Z0-9]/g, '');
                     const normParent = parentName.toUpperCase().replace(/[^A-Z0-9]/g, '');
-                    
+
                     // Combine names for matching: if it's in the hierarchy, we want it
                     const combinedNorm = normMesh + "_" + normParent;
 
                     if (child.isMesh) {
-                        meshList.push({ 
-                            mesh: meshName, 
-                            parent: parentName, 
+                        meshList.push({
+                            mesh: meshName,
+                            parent: parentName,
                             matched: false,
-                            visible: child.visible 
+                            visible: child.visible
                         });
                         const lastEntry = meshList[meshList.length - 1];
 
+                        // Capture Console Material for synchronization
+                        if (combinedNorm.includes('LADODERECHOCONSOLA')) {
+                            consoleMaterial = child.material;
+                        }
+
+                        // Collect Soporte Lector for later update once consoleMaterial is found
+                        if (combinedNorm.includes('SOPORTELECTORBIOMETRICO')) {
+                            meshToUpdate.push(child);
+                        }
+
                         // 1. HIDE THE DOOR: High priority
-                        const isDoor = combinedNorm.includes('V251PPPVIDRIO') || 
-                                       (combinedNorm.includes('PUERTA') && combinedNorm.includes('VIDRIO')) ||
-                                       (combinedNorm.includes('GLASS') && combinedNorm.includes('DOOR'));
+                        const isDoor = combinedNorm.includes('V251PPPVIDRIO') ||
+                            (combinedNorm.includes('PUERTA') && combinedNorm.includes('VIDRIO')) ||
+                            (combinedNorm.includes('GLASS') && combinedNorm.includes('DOOR'));
 
                         if (isDoor) {
                             child.visible = false;
@@ -461,7 +586,7 @@
                                 lastEntry.matched = "💎 GLASS";
                                 console.log(`💎 [HIERARCHY MATCH] Glass: Mesh="${meshName}" Parent="${parentName}"`);
                             }
-                        } 
+                        }
                         // 4. WHITE ACRYLIC for separators
                         else if (combinedNorm.includes('SEPARADOR') || acrylicTargetNames.includes(parentName.trim()) || acrylicTargetNames.includes(meshName.trim())) {
                             child.material = acrylicMaterial;
@@ -476,6 +601,14 @@
                         }
                     }
                 });
+
+                // Apply captured material for synchronization
+                if (consoleMaterial && meshToUpdate.length > 0) {
+                    console.log(`🎨 Synchronizing ${meshToUpdate.length} meshes to Console Material`);
+                    meshToUpdate.forEach(mesh => {
+                        mesh.material = consoleMaterial;
+                    });
+                }
 
                 console.log("📊 Model Mesh Inventory (Deep traversal):");
                 console.table(meshList);
@@ -531,13 +664,13 @@
                 const box = new THREE.Box3().setFromObject(ledBarMesh);
                 const size = new THREE.Vector3();
                 box.getSize(size);
-                
+
                 const width = Math.max(size.x, 0.05);
                 const height = Math.max(size.z, 0.05);
-                
+
                 const center = new THREE.Vector3();
                 box.getCenter(center);
-                
+
                 // The door rotation logic depends on matrices not being preemptively updated globally.
                 // Convert center to local by directly subtracting the model's position since the model has no rotation.
                 const localPos = center.clone().sub(m.position);
@@ -835,20 +968,140 @@
                     }
                 });
 
-                if (object.name.includes('PUERTA') || object.name.includes('BISAGRA') || isDoorClick) {
-                    toggleDoor();
-                } else if (normName.includes('CILINDRO') || normName.includes('CERRADURA') || normName.includes('SOLID1_102')) {
+                if (normName.includes('CILINDRO') || normName.includes('CERRADURA') || normName.includes('SOLID1_102')) {
+                    zoomToLock(object);
+                    showAnnotation(object, "<strong>Abrir con llave.</strong><br>Ante cortes de energía, la maquina permanece cerrada");
+                } else if (normName.includes('SOLID1_114') || normName.includes('SOLID1_37') || normName.includes('SOLID1_41') || normName.includes('SOLID1_40') || normName.includes('SOLID1_39')) {
+                    zoomToBiometric(object);
+                    showAnnotation(object, `
+                        <strong>Apertura biométrica</strong><br>
+                        <span style="font-size: 14px; opacity: 0.8;">Funcionalidades acorde a rol del usuario</span>
+                        <div style="margin-top: 10px; font-size: 13px; font-weight: 400; line-height: 1.4;">
+                            <strong>Usuarios clínicos:</strong> Uso diario, consumen insumos<br>
+                            <strong>Operador:</strong> Repone inventario.
+                        </div>
+                    `);
                     if (!isDoorOpen) toggleDoor();
-                    showInfo("Abrir con llave", "Ante cortes de energía, la maquina permanece cerrada");
+                } else if (normName.includes('MESHFEATURE1') || normName.includes('SOLID1_105')) {
+                    zoomToCamera(object);
+                    showAnnotation(object, "<strong>Cámara (Opcional)</strong><br>Grabación de sesión cuando se abre la puerta.");
+                } else if (object.name.includes('PUERTA') || object.name.includes('BISAGRA') || isDoorClick) {
+                    toggleDoor();
+                    hideAnnotation();
                 } else if (object.name.includes('LECTOR') || object.name.includes('BIOMETRICO')) {
                     showInfo("Face Recognition Security", "Our AI-powered volumetric face recognition identifies users in under 0.5 seconds, ensuring hands-free, high-security access.");
+                    hideAnnotation();
                 } else {
                     showInfo("Interactive Display & Navigation", "Navigate through stored inventory, track usage logs, and manage permissions directly from this integrated touchscreen.");
+                    hideAnnotation();
                 }
             } else {
                 hideInfo();
+                hideAnnotation();
             }
         });
+
+        // --- Specialized Lock Interaction Functions ---
+        let currentLockTarget = null;
+
+        function smoothCameraTransition(newPos, newTarget, duration = 1.5) {
+            // Animate camera position
+            gsap.to(camera.position, {
+                x: newPos.x,
+                y: newPos.y,
+                z: newPos.z,
+                duration: duration,
+                ease: "power2.inOut",
+                overwrite: "auto"
+            });
+
+            // Animate orbital controls target (focal point)
+            gsap.to(controls.target, {
+                x: newTarget.x,
+                y: newTarget.y,
+                z: newTarget.z,
+                duration: duration,
+                ease: "power2.inOut",
+                overwrite: "auto",
+                onUpdate: () => {
+                    camera.lookAt(controls.target);
+                }
+            });
+        }
+
+        function zoomToLock(target) {
+            const worldPos = new THREE.Vector3();
+            target.getWorldPosition(worldPos);
+
+            const zoomTarget = worldPos.clone();
+            const cameraTargetPos = worldPos.clone().add(new THREE.Vector3(0.45, 0.15, 0.75));
+
+            smoothCameraTransition(cameraTargetPos, zoomTarget);
+        }
+
+        function zoomToBiometric(target) {
+            const cameraFrontalPos = new THREE.Vector3(0, 1.2, 4);
+            const lookAtTarget = new THREE.Vector3(0, 0.8, 0);
+
+            smoothCameraTransition(cameraFrontalPos, lookAtTarget);
+        }
+
+        function zoomToCamera(target) {
+            // Using user-provided coordinates for exact perspective
+            const cameraTargetPos = new THREE.Vector3(1.333, 0.388, 1.915);
+            const focusTarget = new THREE.Vector3(0.094, 0.287, 0.417);
+
+            smoothCameraTransition(cameraTargetPos, focusTarget);
+        }
+
+        function showAnnotation(target, text) {
+            currentLockTarget = target;
+            const annotation = document.getElementById('lock-annotation');
+            const svg = document.getElementById('leader-line');
+
+            annotation.innerHTML = text;
+            annotation.style.display = 'block';
+            svg.style.display = 'block';
+
+            updateAnnotationPosition();
+        }
+
+        function hideAnnotation() {
+            currentLockTarget = null;
+            document.getElementById('lock-annotation').style.display = 'none';
+            document.getElementById('leader-line').style.display = 'none';
+        }
+
+        function updateAnnotationPosition() {
+            if (!currentLockTarget) return;
+
+            const worldPos = new THREE.Vector3();
+            currentLockTarget.getWorldPosition(worldPos);
+
+            // Project to screen
+            const vector = worldPos.clone().project(camera);
+
+            const x = (vector.x * 0.5 + 0.5) * canvas.clientWidth;
+            const y = (1 - (vector.y * 0.5 + 0.5)) * canvas.clientHeight;
+
+            const annotation = document.getElementById('lock-annotation');
+            const path = document.getElementById('line-path');
+
+            // Position annotation box offset from the lock
+            const boxX = x + 100;
+            const boxY = y - 50;
+
+            annotation.style.left = `${boxX}px`;
+            annotation.style.top = `${boxY}px`;
+
+            // Update SVG line
+            // Start at the center of the box, end at the lock position
+            const boxRect = annotation.getBoundingClientRect();
+            const startX = boxX; // Left side of box
+            const startY = boxY + boxRect.height / 2;
+
+            path.setAttribute('d', `M ${startX} ${startY} L ${x} ${y}`);
+        }
 
         // Add hover effect
         window.addEventListener('mousemove', (event) => {
@@ -987,10 +1240,51 @@
             if (!isDoorOpen) toggleDoor();
         }
 
+        // --- Camera Debug logic ---
+        const debugOverlay = document.getElementById('camera-debug');
+        const camPosEl = document.getElementById('cam-pos');
+        const camTgtEl = document.getElementById('cam-tgt');
+        const btnCopyDebug = document.getElementById('btn-copy-debug');
+        let debugEnabled = false;
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'd') {
+                debugEnabled = !debugEnabled;
+                debugOverlay.style.display = debugEnabled ? 'block' : 'none';
+                console.log('🐞 Camera debug toggled:', debugEnabled);
+            }
+        });
+
+        btnCopyDebug.addEventListener('click', () => {
+            const p = camera.position;
+            const t = controls.target;
+            const text = `POS: ${p.x.toFixed(3)}, ${p.y.toFixed(3)}, ${p.z.toFixed(3)}\nTGT: ${t.x.toFixed(3)}, ${t.y.toFixed(3)}, ${t.z.toFixed(3)}`;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = btnCopyDebug.textContent;
+                btnCopyDebug.textContent = 'COPIED!';
+                btnCopyDebug.style.background = '#ffffff';
+                setTimeout(() => {
+                    btnCopyDebug.textContent = originalText;
+                    btnCopyDebug.style.background = '#00ff00';
+                }, 1500);
+            });
+        });
+
+        function updateDebugOverlay() {
+            if (!debugEnabled) return;
+            const p = camera.position;
+            const t = controls.target;
+            camPosEl.textContent = `${p.x.toFixed(3)}, ${p.y.toFixed(3)}, ${p.z.toFixed(3)}`;
+            camTgtEl.textContent = `${t.x.toFixed(3)}, ${t.y.toFixed(3)}, ${t.z.toFixed(3)}`;
+        }
+
         // --- Render Loop ---
         function animate() {
             requestAnimationFrame(animate);
             controls.update();
+            updateAnnotationPosition();
+            updateDebugOverlay();
             renderer.render(scene, camera);
         }
 
