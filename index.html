@@ -104,6 +104,37 @@
             backdrop-filter: blur(10px);
             text-align: center;
             z-index: 5;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        #btn-home {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0, 122, 255, 0.3);
+            white-space: nowrap;
+        }
+
+        #btn-home:hover {
+            background: #005bb7;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 122, 255, 0.4);
+        }
+
+        #btn-home:active {
+            transform: translateY(0);
         }
 
         /* Interaction Tooltip (Click to open) */
@@ -342,7 +373,8 @@
     </div>
 
     <div class="info-panel">
-        🖱️ Click to interact | Right-click to pan | Simulator on the right
+        <span id="info-content">🖱️ Click to interact | Right-click to pan | Simulator on the right</span>
+        <button id="btn-home">🏠 Home</button>
     </div>
 
     <div id="camera-debug">
@@ -441,6 +473,12 @@
         dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
         loader.setDRACOLoader(dracoLoader);
 
+        // --- Texture Loading ---
+        const textureLoader = new THREE.TextureLoader();
+        const standbyTexture = textureLoader.load('GUI_Standby.png');
+        standbyTexture.colorSpace = THREE.SRGBColorSpace;
+        standbyTexture.flipY = false; // GLTF standard
+
         let model = null;
         let isDoorOpen = false;
         let hingePivot = null; // THREE.Group at the hinge axis
@@ -455,6 +493,15 @@
                 if (child.isMesh) {
                     child.castShadow = true;
                     child.receiveShadow = true;
+
+                    // Ensure smooth shading
+                    if (child.geometry) {
+                        child.geometry.computeVertexNormals();
+                    }
+                    if (child.material) {
+                        child.material.flatShading = false;
+                        child.material.needsUpdate = true;
+                    }
                 }
             });
         }
@@ -471,7 +518,8 @@
                 ior: 1.58,          // Index of Refraction for PC
                 depthWrite: true,   // Better for Physical materials in many cases
                 envMapIntensity: 2.5, // Stronger reflections
-                side: THREE.DoubleSide
+                side: THREE.DoubleSide,
+                flatShading: false
             });
 
             // Highly transparent glass material (Clear)
@@ -485,7 +533,8 @@
                 ior: 1.5,           // Index of Refraction for Class
                 depthWrite: true,
                 envMapIntensity: 3.0,
-                side: THREE.DoubleSide
+                side: THREE.DoubleSide,
+                flatShading: false
             });
 
             // White non-transparent acrylic material
@@ -495,7 +544,8 @@
                 metalness: 0.0,
                 transparent: false,
                 envMapIntensity: 0.8,
-                side: THREE.DoubleSide
+                side: THREE.DoubleSide,
+                flatShading: false
             });
 
             // Aluminum material for the lock
@@ -503,7 +553,8 @@
                 color: 0xe5e5e5, // Lighter, typical of aluminum
                 metalness: 1.0,
                 roughness: 0.4,  // Slightly more matte than stainless steel
-                envMapIntensity: 1.5
+                envMapIntensity: 1.5,
+                flatShading: false
             });
 
             const acrylicTargetNames = [
@@ -539,6 +590,17 @@
                             visible: child.visible
                         });
                         const lastEntry = meshList[meshList.length - 1];
+
+                        // 0. GUI STANDBY (Specific Screen Mesh)
+                        if (normMesh.includes('SOLID1_61')) {
+                            child.material = new THREE.MeshBasicMaterial({
+                                map: standbyTexture,
+                                transparent: true,
+                                side: THREE.DoubleSide
+                            });
+                            lastEntry.matched = "📺 GUI STANDBY";
+                            console.log(`📺 [HIERARCHY MATCH] Applied GUI_Standby.png to: Mesh="${meshName}" Parent="${parentName}"`);
+                        }
 
                         // Capture Console Material for synchronization
                         if (combinedNorm.includes('LADODERECHOCONSOLA')) {
@@ -657,7 +719,8 @@
                     emissive: 0xffffff,
                     emissiveIntensity: 10, // High intensity to simulate glow
                     metalness: 0.1,
-                    roughness: 0.1
+                    roughness: 0.1,
+                    flatShading: false
                 });
 
                 // Add an actual interior light source to simulate light coming from the LED bar
@@ -795,7 +858,8 @@
                                 color: 0x555555,      // Base grey
                                 emissive: 0x333333,   // Subtle glow to look "lighter"
                                 metalness: 0.6,
-                                roughness: 0.4
+                                roughness: 0.4,
+                                flatShading: false
                             });
                             mesh.material = newMat;
                             fixedCount++;
@@ -982,6 +1046,9 @@
                         </div>
                     `);
                     if (!isDoorOpen) toggleDoor();
+                } else if (normName.includes('SOLID1_103')) {
+                    zoomToBiometric(object);
+                    showAnnotation(object, "<strong>Reconocimiento facial (Opcional)</strong><br>Apertura de puerta con reconocimiento facial");
                 } else if (normName.includes('MESHFEATURE1') || normName.includes('SOLID1_105')) {
                     zoomToCamera(object);
                     showAnnotation(object, "<strong>Cámara (Opcional)</strong><br>Grabación de sesión cuando se abre la puerta.");
@@ -1040,8 +1107,8 @@
         }
 
         function zoomToBiometric(target) {
-            const cameraFrontalPos = new THREE.Vector3(0, 1.2, 4);
-            const lookAtTarget = new THREE.Vector3(0, 0.8, 0);
+            const cameraFrontalPos = new THREE.Vector3(0.048, 0.720, 4.001);
+            const lookAtTarget = new THREE.Vector3(-0.033, -0.279, 0.108);
 
             smoothCameraTransition(cameraFrontalPos, lookAtTarget);
         }
@@ -1114,7 +1181,7 @@
 
             if (intersects.length > 0) {
                 const name = intersects[0].object.name.toLowerCase();
-                if (name.includes('puerta') || name.includes('bisagra') || name.includes('lector') || name.includes('solid') || name.includes('cilindro') || name.includes('cerradura') || name.includes('solid1_102')) {
+                if (name.includes('puerta') || name.includes('bisagra') || name.includes('lector') || name.includes('solid') || name.includes('cilindro') || name.includes('cerradura') || name.includes('solid1_102') || name.includes('solid1_103')) {
                     canvas.style.cursor = 'pointer';
                     return;
                 }
@@ -1123,16 +1190,29 @@
         });
 
         function showInfo(title, text) {
+            const content = document.getElementById('info-content');
             const panel = document.querySelector('.info-panel');
-            panel.innerHTML = `<strong>${title}</strong><br>${text}`;
+            content.innerHTML = `<strong>${title}</strong><br>${text}`;
             panel.style.background = 'rgba(0, 122, 255, 0.9)';
         }
 
         function hideInfo() {
+            const content = document.getElementById('info-content');
             const panel = document.querySelector('.info-panel');
-            panel.innerHTML = '🖱️ Click components to explore | Right-click to pan | Scroll to zoom';
+            content.innerHTML = '🖱️ Click components to explore | Right-click to pan | Scroll to zoom';
             panel.style.background = 'rgba(0, 0, 0, 0.7)';
         }
+
+        function resetView() {
+            const defaultPos = new THREE.Vector3(3.000, 1.500, 5.000);
+            const defaultTarget = new THREE.Vector3(0.000, 0.000, 0.000);
+            smoothCameraTransition(defaultPos, defaultTarget);
+        }
+
+        document.getElementById('btn-home').addEventListener('click', (e) => {
+            e.stopPropagation();
+            resetView();
+        });
 
         function toggleDoor() {
             if (!hingePivot) return;
