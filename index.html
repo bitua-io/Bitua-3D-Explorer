@@ -13,6 +13,16 @@
             --text: #1d1d1f;
         }
 
+        @keyframes glow-pulse {
+            0%, 100% { box-shadow: 0 4px 10px rgba(0, 122, 255, 0.25); }
+            50%       { box-shadow: 0 4px 22px rgba(0, 122, 255, 0.6), 0 0 14px rgba(0, 122, 255, 0.28); }
+        }
+
+        @keyframes glow-pulse-pill {
+            0%, 100% { box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1), 0 0 8px rgba(0, 122, 255, 0.2); }
+            50%       { box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 0 0 18px rgba(0, 122, 255, 0.5); }
+        }
+
         body {
             margin: 0;
             font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -118,19 +128,20 @@
             cursor: pointer;
             font-size: 13px;
             font-weight: 600;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             pointer-events: auto;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 10px rgba(0, 122, 255, 0.3);
+            animation: glow-pulse 2.5s ease-in-out infinite;
             white-space: nowrap;
         }
 
         #btn-home:hover {
             background: #005bb7;
             transform: translateY(-2px);
-            box-shadow: 0 6px 15px rgba(0, 122, 255, 0.4);
+            animation-play-state: paused;
+            box-shadow: 0 6px 18px rgba(0, 122, 255, 0.55);
         }
 
         #btn-home:active {
@@ -173,6 +184,7 @@
             height: 60px;
             border-radius: 30px;
             cursor: pointer;
+            animation: glow-pulse-pill 3s ease-in-out infinite;
         }
 
         #sidebar-header {
@@ -182,6 +194,37 @@
             justify-content: space-between;
             cursor: pointer;
             user-select: none;
+            border-radius: 20px 20px 0 0;
+            transition: background 0.2s;
+        }
+
+        #sidebar:not(.collapsed) #sidebar-header:hover {
+            background: rgba(0, 122, 255, 0.05);
+        }
+
+        #btn-simulate {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 14px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            width: 100%;
+            animation: glow-pulse 2.8s ease-in-out infinite;
+            transition: background 0.2s, transform 0.15s;
+        }
+
+        #btn-simulate:hover {
+            background: #005bb7;
+            animation-play-state: paused;
+            box-shadow: 0 6px 18px rgba(0, 122, 255, 0.55);
+            transform: translateY(-1px);
+        }
+
+        #btn-simulate:active {
+            transform: translateY(0);
         }
 
         #sidebar-header h2 {
@@ -307,6 +350,147 @@
             transform: scale(0.95);
         }
 
+        #debug-last-clicked {
+            margin-top: 6px;
+            color: #aaffaa;
+            font-size: 10px;
+        }
+
+        #debug-last-clicked span {
+            color: #ffff00;
+        }
+
+        #debug-paragraph-input {
+            width: 100%;
+            margin-top: 6px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid #00aa00;
+            color: #00ff00;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 10px;
+            padding: 4px 6px;
+            border-radius: 4px;
+            outline: none;
+            resize: vertical;
+            min-height: 48px;
+            box-sizing: border-box;
+        }
+
+        #debug-paragraph-input::placeholder { color: #006600; }
+
+        #debug-save-row {
+            display: flex;
+            gap: 6px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #004400;
+        }
+
+        #debug-label-input {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid #00aa00;
+            color: #00ff00;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 10px;
+            padding: 3px 6px;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        #debug-label-input::placeholder {
+            color: #006600;
+        }
+
+        #btn-save-view {
+            background: #00aa00;
+            color: black;
+            border: none;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        #btn-save-view:hover { background: #00cc00; }
+        #btn-save-view:active { transform: scale(0.95); }
+
+        #debug-viewpoints-list {
+            max-height: 160px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 6px;
+        }
+
+        .debug-vp-entry {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            background: rgba(0, 80, 0, 0.3);
+            border: 1px solid #004400;
+            border-radius: 4px;
+            padding: 4px 6px;
+            gap: 6px;
+        }
+
+        .debug-vp-label {
+            font-weight: bold;
+            color: #aaffaa;
+            font-size: 10px;
+            flex: 1;
+            word-break: break-all;
+        }
+
+        .debug-vp-coords {
+            color: #007700;
+            font-size: 9px;
+            line-height: 1.4;
+        }
+
+        .debug-vp-del {
+            background: none;
+            border: none;
+            color: #ff4444;
+            cursor: pointer;
+            font-size: 11px;
+            padding: 0 2px;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
+        .debug-vp-del:hover { color: #ff0000; }
+
+        #debug-export-row {
+            display: none;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        #debug-export-row button {
+            flex: 1;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: 'Courier New', Courier, monospace;
+            transition: all 0.2s;
+        }
+
+        #btn-copy-json { background: #00ff00; color: black; }
+        #btn-copy-json:hover { background: #00cc00; }
+
+        #btn-export-views { background: #0055ff; color: white; }
+        #btn-export-views:hover { background: #0044cc; }
+
+        #debug-export-row button:active { transform: scale(0.95); }
+
         #debug-toggle-hint {
             position: absolute;
             bottom: 80px;
@@ -384,6 +568,17 @@
         </h3>
         <div>POS: <span id="cam-pos">0, 0, 0</span></div>
         <div>TGT: <span id="cam-tgt">0, 0, 0</span></div>
+        <div id="debug-last-clicked">Part: <span id="debug-part-name">none</span></div>
+        <div id="debug-save-row">
+            <input id="debug-label-input" type="text" placeholder="Label this view..." />
+            <button id="btn-save-view">SAVE VIEW</button>
+        </div>
+        <textarea id="debug-paragraph-input" placeholder="Description / notes for this viewpoint..."></textarea>
+        <div id="debug-viewpoints-list"></div>
+        <div id="debug-export-row">
+            <button id="btn-copy-json">COPY JSON</button>
+            <button id="btn-export-views">EXPORT FILE</button>
+        </div>
     </div>
     <div id="debug-toggle-hint">Press 'D' for Camera Coordinates</div>
 
@@ -1003,6 +1198,74 @@
         // --- Interaction ---
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
+        let hoveredMesh = null;
+
+        function isInteractiveMesh(object) {
+            if (!object) return false;
+            const norm = object.name.toUpperCase();
+            if (norm.includes('CILINDRO') || norm.includes('CERRADURA') || norm.includes('SOLID1_102')) return true;
+            if (norm.includes('SOLID1_114') || norm.includes('SOLID1_37') || norm.includes('SOLID1_41') ||
+                norm.includes('SOLID1_40') || norm.includes('SOLID1_39')) return true;
+            if (norm.includes('SOLID1_103')) return true;
+            if (norm.includes('MESHFEATURE1') || norm.includes('SOLID1_105')) return true;
+            let isDoor = false;
+            object.traverseAncestors((ancestor) => {
+                if (ancestor.name && (
+                    ancestor.name.includes('PUERTA') ||
+                    ancestor.name.includes('BISAGRA') ||
+                    ancestor.name === 'HingePivot'
+                )) isDoor = true;
+            });
+            if (isDoor) return true;
+            if (norm.includes('PUERTA') || norm.includes('BISAGRA')) return true;
+            return false;
+        }
+
+        function applyHoverGlow(mesh) {
+            if (!mesh.userData.glowCloned) {
+                const origMat = mesh.material;
+                mesh.material = origMat.clone();
+                if (mesh.material.emissive) {
+                    mesh.material.emissive = mesh.material.emissive.clone();
+                    mesh.userData.origEmissive = mesh.material.emissive.getHex();
+                } else {
+                    mesh.userData.origEmissive = 0x000000;
+                }
+                mesh.userData.origEmissiveIntensity = mesh.material.emissiveIntensity || 0;
+                mesh.userData.glowCloned = true;
+            }
+            if (mesh.material.emissive) {
+                mesh.material.emissive.setHex(0x88bbff);
+                mesh.material.emissiveIntensity = 0.22;
+            }
+        }
+
+        function removeHoverGlow(mesh) {
+            if (!mesh || !mesh.userData.glowCloned) return;
+            if (mesh.material.emissive) {
+                mesh.material.emissive.setHex(mesh.userData.origEmissive);
+                mesh.material.emissiveIntensity = mesh.userData.origEmissiveIntensity;
+            }
+        }
+
+        function handleHover(hitObject) {
+            const interactive = hitObject && isInteractiveMesh(hitObject) ? hitObject : null;
+            if (interactive === hoveredMesh) return;
+
+            // Restore previous
+            if (hoveredMesh) {
+                removeHoverGlow(hoveredMesh);
+                hoveredMesh = null;
+            }
+
+            if (interactive) {
+                applyHoverGlow(interactive);
+                hoveredMesh = interactive;
+                canvas.style.cursor = 'pointer';
+            } else {
+                canvas.style.cursor = 'default';
+            }
+        }
 
         window.addEventListener('click', (event) => {
             if (event.target.closest('#sidebar') || event.target.closest('#dev-sidebar')) return;
@@ -1018,6 +1281,8 @@
                 const object = intersects[0].object;
 
                 console.log('Clicked:', object.name);
+                lastClickedPart = object.name;
+                if (debugPartName) debugPartName.textContent = object.name || 'unnamed';
                 const normName = object.name.toUpperCase();
 
                 // Check if clicking door or hinge area (traverse ancestors including pivot)
@@ -1066,6 +1331,21 @@
                 hideInfo();
                 hideAnnotation();
             }
+        });
+
+        window.addEventListener('mousemove', (event) => {
+            if (!model) return;
+            if (event.target.closest('#sidebar') || event.target.closest('#dev-sidebar')) {
+                handleHover(null);
+                return;
+            }
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(scene.children, true);
+            handleHover(intersects.length > 0 ? intersects[0].object : null);
         });
 
         // --- Specialized Lock Interaction Functions ---
@@ -1325,6 +1605,16 @@
         const camPosEl = document.getElementById('cam-pos');
         const camTgtEl = document.getElementById('cam-tgt');
         const btnCopyDebug = document.getElementById('btn-copy-debug');
+        const btnSaveView = document.getElementById('btn-save-view');
+        const debugLabelInput = document.getElementById('debug-label-input');
+        const debugViewpointsList = document.getElementById('debug-viewpoints-list');
+        const btnExportViews = document.getElementById('btn-export-views');
+        const btnCopyJson = document.getElementById('btn-copy-json');
+        const debugExportRow = document.getElementById('debug-export-row');
+        const debugParagraphInput = document.getElementById('debug-paragraph-input');
+        const debugPartName = document.getElementById('debug-part-name');
+        const savedViewpoints = [];
+        let lastClickedPart = null;
         let debugEnabled = false;
 
         window.addEventListener('keydown', (e) => {
@@ -1347,6 +1637,74 @@
                 setTimeout(() => {
                     btnCopyDebug.textContent = originalText;
                     btnCopyDebug.style.background = '#00ff00';
+                }, 1500);
+            });
+        });
+
+        function renderViewpointsList() {
+            debugViewpointsList.innerHTML = '';
+            savedViewpoints.forEach((vp, i) => {
+                const entry = document.createElement('div');
+                entry.className = 'debug-vp-entry';
+                entry.innerHTML = `
+                    <div style="flex:1;min-width:0">
+                        <div class="debug-vp-label">${vp.label}</div>
+                        ${vp.part ? `<div class="debug-vp-coords" style="color:#ffff00">Part: ${vp.part}</div>` : ''}
+                        ${vp.paragraph ? `<div class="debug-vp-coords" style="color:#aaaaff;white-space:pre-wrap">${vp.paragraph}</div>` : ''}
+                        <div class="debug-vp-coords">P: ${vp.position.x}, ${vp.position.y}, ${vp.position.z}</div>
+                        <div class="debug-vp-coords">T: ${vp.target.x}, ${vp.target.y}, ${vp.target.z}</div>
+                    </div>
+                    <button class="debug-vp-del" data-index="${i}" title="Delete">✕</button>
+                `;
+                debugViewpointsList.appendChild(entry);
+            });
+            debugViewpointsList.querySelectorAll('.debug-vp-del').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    savedViewpoints.splice(parseInt(btn.dataset.index), 1);
+                    renderViewpointsList();
+                });
+            });
+            debugExportRow.style.display = savedViewpoints.length > 0 ? 'flex' : 'none';
+        }
+
+        btnSaveView.addEventListener('click', () => {
+            const label = debugLabelInput.value.trim() || `View ${savedViewpoints.length + 1}`;
+            const p = camera.position;
+            const t = controls.target;
+            savedViewpoints.push({
+                label,
+                paragraph: debugParagraphInput.value.trim(),
+                part: lastClickedPart || null,
+                position: { x: +p.x.toFixed(4), y: +p.y.toFixed(4), z: +p.z.toFixed(4) },
+                target:   { x: +t.x.toFixed(4), y: +t.y.toFixed(4), z: +t.z.toFixed(4) }
+            });
+            debugLabelInput.value = '';
+            debugParagraphInput.value = '';
+            renderViewpointsList();
+        });
+
+        debugLabelInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') btnSaveView.click();
+            e.stopPropagation();
+        });
+
+        debugParagraphInput.addEventListener('keydown', (e) => { e.stopPropagation(); });
+
+        btnExportViews.addEventListener('click', () => {
+            const blob = new Blob([JSON.stringify(savedViewpoints, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'viewpoints.json'; a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        btnCopyJson.addEventListener('click', () => {
+            navigator.clipboard.writeText(JSON.stringify(savedViewpoints, null, 2)).then(() => {
+                btnCopyJson.textContent = 'COPIED!';
+                btnCopyJson.style.background = '#ffffff';
+                setTimeout(() => {
+                    btnCopyJson.textContent = 'COPY JSON';
+                    btnCopyJson.style.background = '#00ff00';
                 }, 1500);
             });
         });
