@@ -1,0 +1,34 @@
+{
+  "annotations": {
+    "lock": {
+      "title": "Abrir con llave.",
+      "body": "Ante cortes de energía, la maquina permanece cerrada"
+    },
+    "biometric": {
+      "title": "Apertura biométrica",
+      "subtitle": "Funcionalidades acorde a rol del usuario",
+      "details": {
+        "clinicalUsers": "Uso diario, consumen insumos",
+        "operator": "Repone inventario."
+      }
+    },
+    "facialRecognition": {
+      "title": "Reconocimiento facial (Opcional)",
+      "body": "Apertura de puerta con reconocimiento facial"
+    },
+    "camera": {
+      "title": "Cámara (Opcional)",
+      "body": "Grabación de sesión cuando se abre la puerta."
+    }
+  },
+  "infoPanels": {
+    "faceRecognition": {
+      "title": "Face Recognition Security",
+      "body": "Our AI-powered volumetric face recognition identifies users in under 0.5 seconds, ensuring hands-free, high-security access."
+    },
+    "default": {
+      "title": "Interactive Display & Navigation",
+      "body": "Navigate through stored inventory, track usage logs, and manage permissions directly from this integrated touchscreen."
+    }
+  }
+}
