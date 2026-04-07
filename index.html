@@ -1221,14 +1221,16 @@
 
         function isInteractiveMesh(object) {
             if (!object) return false;
-            const norm = object.name.toUpperCase();
-            if (norm.includes('CILINDRO') || norm.includes('CERRADURA') || norm.includes('SOLID1_102')) return true;
-            if (norm.includes('SOLID1_114') || norm.includes('SOLID1_37') || norm.includes('SOLID1_41') ||
-                norm.includes('SOLID1_40') || norm.includes('SOLID1_39') ||
-                norm.includes('HUELLERO') || norm.includes('LECTOR') || norm.includes('BIOMETRICO')) return true;
-            if (norm.includes('SOLID1_103')) return true;
-            if (norm.includes('MESHFEATURE1') || norm.includes('SOLID1_105')) return true;
-            if (norm.includes('SOLID1_81')) return true;
+            let combinedNorm = object.name.toUpperCase();
+            object.traverseAncestors(a => { if (a.name) combinedNorm += " " + a.name.toUpperCase(); });
+            
+            if (combinedNorm.includes('CILINDRO') || combinedNorm.includes('CERRADURA') || combinedNorm.includes('SOLID1_70')) return true;
+            if (combinedNorm.includes('SOLID1_82') || combinedNorm.includes('SOLID1_37') || combinedNorm.includes('SOLID1_41') ||
+                combinedNorm.includes('SOLID1_40') || combinedNorm.includes('SOLID1_39') ||
+                combinedNorm.includes('HUELLERO') || combinedNorm.includes('LECTOR') || combinedNorm.includes('BIOMETRICO')) return true;
+            if (combinedNorm.includes('SOLID1_71')) return true;
+            if (combinedNorm.includes('MESHFEATURE1') || combinedNorm.includes('SOLID1_73')) return true;
+            if (combinedNorm.includes('SOLID1_81') || combinedNorm.includes('SOLID1_43') || combinedNorm.includes('PANTALLANUEVA')) return true;
             let isDoor = false;
             object.traverseAncestors((ancestor) => {
                 if (ancestor.name && (
@@ -1304,7 +1306,10 @@
                 console.log('Clicked:', object.name);
                 lastClickedPart = object.name;
                 if (debugPartName) debugPartName.textContent = object.name || 'unnamed';
-                const normName = object.name.toUpperCase();
+                
+                // Get full hierarchical name for matching (helps when mesh name is just "Solid1")
+                let combinedName = object.name.toUpperCase();
+                object.traverseAncestors(a => { if (a.name) combinedName += " " + a.name.toUpperCase(); });
 
                 // Check if clicking door or hinge area (traverse ancestors including pivot)
                 let isDoorClick = false;
@@ -1318,32 +1323,38 @@
                     }
                 });
 
-                if (normName.includes('CILINDRO') || normName.includes('CERRADURA') || normName.includes('SOLID1_102')) {
+                if (combinedName.includes('CILINDRO') || combinedName.includes('CERRADURA') || combinedName.includes('SOLID1_70')) {
                     zoomToLock(object);
-                    showAnnotation(object, "<strong>Abrir con llave.</strong><br>Ante cortes de energía, la maquina permanece cerrada");
-                } else if (normName.includes('SOLID1_114') || normName.includes('SOLID1_37') || normName.includes('SOLID1_41') || normName.includes('SOLID1_40') || normName.includes('SOLID1_39') || normName.includes('HUELLERO') || normName.includes('LECTOR') || normName.includes('BIOMETRICO')) {
+                    showAnnotation(object, "<strong>Abrir con llave</strong><br>Ante cortes de energía, la máquina pertenece cerrada,");
+                } else if (combinedName.includes('SOLID1_82') || combinedName.includes('SOLID1_37') || combinedName.includes('SOLID1_41') || combinedName.includes('SOLID1_40') || combinedName.includes('SOLID1_39') || combinedName.includes('HUELLERO') || combinedName.includes('LECTOR') || combinedName.includes('BIOMETRICO')) {
                     zoomToBiometric(object);
                     showAnnotation(object, `
-                        <strong>Apertura biométrica</strong><br>
-                        <span style="font-size: 14px; opacity: 0.8;">Funcionalidades acorde a rol del usuario</span>
-                        <div style="margin-top: 10px; font-size: 13px; font-weight: 400; line-height: 1.4;">
-                            <strong>Usuarios clínicos:</strong> Uso diario, consumen insumos<br>
-                            <strong>Operador:</strong> Repone inventario.
+                        <strong>Apertura Biométrica</strong><br>
+                        <div style="margin-top: 5px; font-size: 14px; font-weight: 400; line-height: 1.4;">
+                            Funcionalidades acorde a rol de usuarios<br>
+                            <strong>Usuario clínico:</strong> Utilizan la máquina diariamente, consumen insumos. <br>
+                            <strong>Operador:</strong> Repone inventario
                         </div>
                     `);
                     if (!isDoorOpen) toggleDoor();
-                } else if (normName.includes('SOLID1_103')) {
+                } else if (combinedName.includes('SOLID1_71')) {
                     zoomToBiometric(object);
-                    showAnnotation(object, "<strong>Reconocimiento facial (Opcional)</strong><br>Apertura de puerta con reconocimiento facial");
-                } else if (normName.includes('MESHFEATURE1') || normName.includes('SOLID1_105')) {
+                    showAnnotation(object, "<strong>Reconocimiento facial (opcional)</strong><br>Apertura de puerta con reconocimiento facial");
+                } else if (combinedName.includes('MESHFEATURE1') || combinedName.includes('SOLID1_73')) {
                     zoomToCamera(object);
-                    showAnnotation(object, "<strong>Cámara (Opcional)</strong><br>Grabación de sesión cuando se abre la puerta.");
-                } else if (normName.includes('SOLID1_81')) {
+                    showAnnotation(object, "<strong>Cámara (Opcional)</strong><br>Grabación de sesión cuando se abre la puerta");
+                } else if (combinedName.includes('SOLID1_81')) {
                     smoothCameraTransition(
                         new THREE.Vector3(0.3826, 0.3248, 0.657),
                         new THREE.Vector3(0.3328, 0.2782, 0.121)
                     );
                     showAnnotation(object, "<strong>Pantalla</strong><br>Pantalla táctil para ingresar");
+                } else if (combinedName.includes('SOLID1_43') || combinedName.includes('PANTALLANUEVA')) {
+                    smoothCameraTransition(
+                        new THREE.Vector3(0.4489, 0.328, 0.6403),
+                        new THREE.Vector3(0.4363, 0.3089, 0.4923)
+                    );
+                    showAnnotation(object, "<strong>Pantalla de inicio</strong><br>Abrir máquina con huella, ID de paciente u Operador");
                 } else if (object.name.includes('PUERTA') || object.name.includes('BISAGRA') || isDoorClick) {
                     toggleDoor();
                     hideAnnotation();
@@ -1404,13 +1415,10 @@
         }
 
         function zoomToLock(target) {
-            const worldPos = new THREE.Vector3();
-            target.getWorldPosition(worldPos);
+            const cameraTargetPos = new THREE.Vector3(0.8528, 0.087, 1.0604);
+            const focusTarget = new THREE.Vector3(0.4028, -0.063, 0.3104);
 
-            const zoomTarget = worldPos.clone();
-            const cameraTargetPos = worldPos.clone().add(new THREE.Vector3(0.45, 0.15, 0.75));
-
-            smoothCameraTransition(cameraTargetPos, zoomTarget);
+            smoothCameraTransition(cameraTargetPos, focusTarget);
         }
 
         function zoomToBiometric(target) {
