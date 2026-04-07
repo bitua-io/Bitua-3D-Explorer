@@ -588,7 +588,7 @@
             "imports": {
                 "three": "https://unpkg.com/three@0.162.0/build/three.module.js",
                 "three/addons/": "https://unpkg.com/three@0.162.0/examples/jsm/",
-                "gsap": "https://cdn.skypack.dev/gsap"
+                "gsap": "https://esm.run/gsap@3.12.5"
             }
         }
     </script>
@@ -787,10 +787,35 @@
                         const lastEntry = meshList[meshList.length - 1];
 
                         // 0. GUI STANDBY (Specific Screen Mesh)
-                        if (normMesh.includes('SOLID1_61') || normMesh.includes('PANTALLANUEVA')) {
+                        // Also check combinedNorm so parent "V2.5 PANTALLA NUEVA:1" matches (Solid1_43)
+                        if (normMesh.includes('SOLID1_61') || combinedNorm.includes('PANTALLANUEVA')) {
+                            // Generate planar UV coordinates — this mesh has none in the GLB (CAD export)
+                            const geo = child.geometry;
+                            const positions = geo.attributes.position;
+                            const bbox = new THREE.Box3().setFromBufferAttribute(positions);
+                            const size = new THREE.Vector3();
+                            bbox.getSize(size);
+                            // Pick the two largest dimensions as the UV plane axes
+                            const dims = [
+                                { axis: 'x', size: size.x },
+                                { axis: 'y', size: size.y },
+                                { axis: 'z', size: size.z }
+                            ].sort((a, b) => b.size - a.size);
+                            const uAxis = dims[0].axis;
+                            const vAxis = dims[1].axis;
+                            const uvArr = new Float32Array(positions.count * 2);
+                            for (let i = 0; i < positions.count; i++) {
+                                const coords = { x: positions.getX(i), y: positions.getY(i), z: positions.getZ(i) };
+                                const u0 = (coords[uAxis] - bbox.min[uAxis]) / size[uAxis];
+                                const v0 = (coords[vAxis] - bbox.min[vAxis]) / size[vAxis];
+                                // Rotate 90° CCW + mirror on Y: new_u = 1 - v0, new_v = 1 - u0
+                                uvArr[i * 2]     = 1 - v0;
+                                uvArr[i * 2 + 1] = 1 - u0;
+                            }
+                            geo.setAttribute('uv', new THREE.BufferAttribute(uvArr, 2));
+
                             child.material = new THREE.MeshBasicMaterial({
                                 map: standbyTexture,
-                                transparent: true,
                                 side: THREE.DoubleSide
                             });
                             lastEntry.matched = "📺 GUI STANDBY";
@@ -1203,6 +1228,7 @@
                 norm.includes('HUELLERO') || norm.includes('LECTOR') || norm.includes('BIOMETRICO')) return true;
             if (norm.includes('SOLID1_103')) return true;
             if (norm.includes('MESHFEATURE1') || norm.includes('SOLID1_105')) return true;
+            if (norm.includes('SOLID1_81')) return true;
             let isDoor = false;
             object.traverseAncestors((ancestor) => {
                 if (ancestor.name && (
@@ -1312,6 +1338,12 @@
                 } else if (normName.includes('MESHFEATURE1') || normName.includes('SOLID1_105')) {
                     zoomToCamera(object);
                     showAnnotation(object, "<strong>Cámara (Opcional)</strong><br>Grabación de sesión cuando se abre la puerta.");
+                } else if (normName.includes('SOLID1_81')) {
+                    smoothCameraTransition(
+                        new THREE.Vector3(0.3826, 0.3248, 0.657),
+                        new THREE.Vector3(0.3328, 0.2782, 0.121)
+                    );
+                    showAnnotation(object, "<strong>Pantalla</strong><br>Pantalla táctil para ingresar");
                 } else if (object.name.includes('PUERTA') || object.name.includes('BISAGRA') || isDoorClick) {
                     toggleDoor();
                     hideAnnotation();
