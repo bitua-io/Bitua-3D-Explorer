@@ -35,24 +35,59 @@
         }
 
         header {
-            padding: 20px;
-            text-align: center;
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(20px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 40px;
+            background: #ffffff;
             z-index: 10;
-            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+            box-shadow: 0 1px 10px rgba(0, 0, 0, 0.05);
+            height: 80px;
         }
 
-        header h1 {
-            margin: 0;
-            font-size: 24px;
+        .header-logo {
+            display: flex;
+            align-items: center;
+        }
+
+        .header-logo img {
+            height: 40px;
+            width: auto;
+        }
+
+        .header-nav {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .header-nav a {
+            text-decoration: none;
+            color: #1d1d1f;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .header-nav a:hover {
+            color: #00bf72; /* Teal matching logo */
+        }
+
+        .header-nav a.active {
+            color: #00bf72;
             font-weight: 600;
         }
 
-        header p {
-            margin: 5px 0 0;
-            opacity: 0.6;
+        .lang-selector {
+            border: 1px solid #e0e0e0;
+            padding: 5px 10px;
+            border-radius: 5px;
             font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            header { padding: 0 20px; height: 60px; }
+            .header-nav { display: none; }
         }
 
         #container {
@@ -515,8 +550,19 @@
     </div>
 
     <header>
-        <h1>Bitua</h1>
-        <p>Smart Cabinet Series (Updated)</p>
+        <div class="header-logo">
+            <img src="Assets/logo-Bitua.avif" alt="Bitua Logo">
+        </div>
+        <nav class="header-nav">
+            <a href="#" class="active">Home</a>
+            <a href="#">Nosotros</a>
+            <a href="#">Software</a>
+            <a href="#">Productos</a>
+            <a href="#">Partners</a>
+            <a href="#">Blog</a>
+            <a href="#">Más</a>
+            <div class="lang-selector">ES ▾</div>
+        </nav>
     </header>
 
 
@@ -604,6 +650,13 @@
         // Initialize RectAreaLight support
         RectAreaLightUniformsLib.init();
         console.log("🚀 Bitua 3D Explorer - GREEN V2.1 script started");
+
+        // --- Dev Mode Check ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const isDev = urlParams.get('dev') === 'true';
+        if (isDev) {
+            console.log("🛠️ Dev mode enabled via URL");
+        }
 
         // --- Setup ---
         const canvas = document.querySelector('#three-canvas');
@@ -1650,7 +1703,10 @@
         const debugPartName = document.getElementById('debug-part-name');
         const savedViewpoints = [];
         let lastClickedPart = null;
-        let debugEnabled = false;
+        let debugEnabled = isDev;
+        debugOverlay.style.display = debugEnabled ? 'block' : 'none';
+        const debugToggleHint = document.getElementById('debug-toggle-hint');
+        if (!isDev && debugToggleHint) debugToggleHint.style.display = 'none';
 
         window.addEventListener('keydown', (e) => {
             if (e.key.toLowerCase() === 'd') {
