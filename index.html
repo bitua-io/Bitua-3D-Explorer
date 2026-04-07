@@ -588,7 +588,7 @@
             "imports": {
                 "three": "https://unpkg.com/three@0.162.0/build/three.module.js",
                 "three/addons/": "https://unpkg.com/three@0.162.0/examples/jsm/",
-                "gsap": "https://cdn.skypack.dev/gsap"
+                "gsap": "https://esm.run/gsap@3.12.5"
             }
         }
     </script>
@@ -787,10 +787,35 @@
                         const lastEntry = meshList[meshList.length - 1];
 
                         // 0. GUI STANDBY (Specific Screen Mesh)
-                        if (normMesh.includes('SOLID1_61')) {
+                        // Also check combinedNorm so parent "V2.5 PANTALLA NUEVA:1" matches (Solid1_43)
+                        if (normMesh.includes('SOLID1_61') || combinedNorm.includes('PANTALLANUEVA')) {
+                            // Generate planar UV coordinates — this mesh has none in the GLB (CAD export)
+                            const geo = child.geometry;
+                            const positions = geo.attributes.position;
+                            const bbox = new THREE.Box3().setFromBufferAttribute(positions);
+                            const size = new THREE.Vector3();
+                            bbox.getSize(size);
+                            // Pick the two largest dimensions as the UV plane axes
+                            const dims = [
+                                { axis: 'x', size: size.x },
+                                { axis: 'y', size: size.y },
+                                { axis: 'z', size: size.z }
+                            ].sort((a, b) => b.size - a.size);
+                            const uAxis = dims[0].axis;
+                            const vAxis = dims[1].axis;
+                            const uvArr = new Float32Array(positions.count * 2);
+                            for (let i = 0; i < positions.count; i++) {
+                                const coords = { x: positions.getX(i), y: positions.getY(i), z: positions.getZ(i) };
+                                const u0 = (coords[uAxis] - bbox.min[uAxis]) / size[uAxis];
+                                const v0 = (coords[vAxis] - bbox.min[vAxis]) / size[vAxis];
+                                // Rotate 90° CCW + mirror on Y: new_u = 1 - v0, new_v = 1 - u0
+                                uvArr[i * 2]     = 1 - v0;
+                                uvArr[i * 2 + 1] = 1 - u0;
+                            }
+                            geo.setAttribute('uv', new THREE.BufferAttribute(uvArr, 2));
+
                             child.material = new THREE.MeshBasicMaterial({
                                 map: standbyTexture,
-                                transparent: true,
                                 side: THREE.DoubleSide
                             });
                             lastEntry.matched = "📺 GUI STANDBY";
@@ -979,8 +1004,11 @@
                         hingeAssemblies.push(child);
                     }
                 }
-                // Door assembly (top level)
-                if (child.name === 'V251_PPP_PUERTA1') {
+                // Door assembly (top level) — match both old and new model names
+                const normChildDoor = child.name.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                const parentNameUpper = (child.parent && child.parent.name) ? child.parent.name.toUpperCase() : '';
+                if (child.name === 'V251_PPP_PUERTA1' ||
+                    (normChildDoor.includes('PUERTA') && !parentNameUpper.includes('PUERTA'))) {
                     doorNodes.push(child);
                 }
                 // Check for explicit rotation axis part
@@ -1047,16 +1075,7 @@
                             hingeNodes.push(mesh);
                             movingCount++;
                         } else {
-                            // Left side -> Fixed
-                            // Make it appear lighter by adding subtle emissive
-                            const newMat = new THREE.MeshStandardMaterial({
-                                color: 0x555555,      // Base grey
-                                emissive: 0x333333,   // Subtle glow to look "lighter"
-                                metalness: 0.6,
-                                roughness: 0.4,
-                                flatShading: false
-                            });
-                            mesh.material = newMat;
+                            // Left side -> Fixed (keep original GLB color for uniform appearance)
                             fixedCount++;
                         }
                     });
@@ -1158,7 +1177,7 @@
 
         // Load the model
         loader.load(
-            'Cabinet v2.5 con eje.glb',
+            'V2.5.1 AAA ENSAMBLE CABINET MAIN 3D visualizer.glb',
             (gltf) => {
                 model = gltf.scene;
 
@@ -1205,9 +1224,11 @@
             const norm = object.name.toUpperCase();
             if (norm.includes('CILINDRO') || norm.includes('CERRADURA') || norm.includes('SOLID1_102')) return true;
             if (norm.includes('SOLID1_114') || norm.includes('SOLID1_37') || norm.includes('SOLID1_41') ||
-                norm.includes('SOLID1_40') || norm.includes('SOLID1_39')) return true;
+                norm.includes('SOLID1_40') || norm.includes('SOLID1_39') ||
+                norm.includes('HUELLERO') || norm.includes('LECTOR') || norm.includes('BIOMETRICO')) return true;
             if (norm.includes('SOLID1_103')) return true;
             if (norm.includes('MESHFEATURE1') || norm.includes('SOLID1_105')) return true;
+            if (norm.includes('SOLID1_81')) return true;
             let isDoor = false;
             object.traverseAncestors((ancestor) => {
                 if (ancestor.name && (
@@ -1300,7 +1321,7 @@
                 if (normName.includes('CILINDRO') || normName.includes('CERRADURA') || normName.includes('SOLID1_102')) {
                     zoomToLock(object);
                     showAnnotation(object, "<strong>Abrir con llave.</strong><br>Ante cortes de energía, la maquina permanece cerrada");
-                } else if (normName.includes('SOLID1_114') || normName.includes('SOLID1_37') || normName.includes('SOLID1_41') || normName.includes('SOLID1_40') || normName.includes('SOLID1_39')) {
+                } else if (normName.includes('SOLID1_114') || normName.includes('SOLID1_37') || normName.includes('SOLID1_41') || normName.includes('SOLID1_40') || normName.includes('SOLID1_39') || normName.includes('HUELLERO') || normName.includes('LECTOR') || normName.includes('BIOMETRICO')) {
                     zoomToBiometric(object);
                     showAnnotation(object, `
                         <strong>Apertura biométrica</strong><br>
@@ -1317,6 +1338,12 @@
                 } else if (normName.includes('MESHFEATURE1') || normName.includes('SOLID1_105')) {
                     zoomToCamera(object);
                     showAnnotation(object, "<strong>Cámara (Opcional)</strong><br>Grabación de sesión cuando se abre la puerta.");
+                } else if (normName.includes('SOLID1_81')) {
+                    smoothCameraTransition(
+                        new THREE.Vector3(0.3826, 0.3248, 0.657),
+                        new THREE.Vector3(0.3328, 0.2782, 0.121)
+                    );
+                    showAnnotation(object, "<strong>Pantalla</strong><br>Pantalla táctil para ingresar");
                 } else if (object.name.includes('PUERTA') || object.name.includes('BISAGRA') || isDoorClick) {
                     toggleDoor();
                     hideAnnotation();
