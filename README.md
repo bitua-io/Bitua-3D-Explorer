@@ -1,0 +1,1 @@
+**Repositorio archivado.** Este repositorio está archivado y se conserva como respaldo en dos lugares independientes: GitHub (`bitua-io/Bitua-3D-Explorer`) y Gitea (`gitea.bitua.io/bitua/Bitua-3D-Explorer`). Ya no hay mirror entre ellos y no recibe cambios. Archivado en el barrido de repos muertos ([bitua/network#36](https://gitea.bitua.io/bitua/network/issues/36)).
